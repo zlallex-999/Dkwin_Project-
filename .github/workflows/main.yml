@@ -5,9 +5,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install Buildozer
-        run: pip install buildozer cython==0.29.33
-      - name: Build
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Dependencies
         run: |
-          buildozer init
-          buildozer android debug
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          pip install --user --upgrade buildozer cython==0.29.33 virtualenv
+      - name: Build with Buildozer
+        run: |
+          yes | buildozer init
+          # এপের নাম Dkwin Boss সেট করা হচ্ছে
+          sed -i 's/^title = .*/title = Dkwin Boss/' buildozer.spec
+          sed -i 's/^package.name = .*/package.name = dkwinboss/' buildozer.spec
+          # লাইব্রেরি এবং লাইসেন্স সেটিংস
+          sed -i 's/^requirements = .*/requirements = python3,kivy==2.2.1,kivymd==1.1.1,numpy,opencv-python,pytesseract,sqlite3/' buildozer.spec
+          sed -i 's/^#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+          # লাইসেন্স ফোর্স একসেপ্ট করে বিল্ড শুরু
+          mkdir -p ~/.android && touch ~/.android/repositories.cfg
+          yes | buildozer android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dkwin_Boss_APK
+          path: bin/*.apk
