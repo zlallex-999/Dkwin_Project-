@@ -1,33 +1,49 @@
-name: Build APK
+name: Build APK with OpenCV
 on: [push]
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-      - name: Install Dependencies
+          python-version: '3.10'
+
+      - name: Install System Dependencies
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          sudo apt install -y \
+            git zip unzip openjdk-17-jdk python3-pip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev \
+            libssl-dev libgmp-dev libltdl-dev
           pip install --user --upgrade buildozer cython==0.29.33 virtualenv
+
       - name: Build with Buildozer
         run: |
-          yes | buildozer init
-          # এপের নাম Dkwin Boss সেট করা হচ্ছে
-          sed -i 's/^title = .*/title = Dkwin Boss/' buildozer.spec
-          sed -i 's/^package.name = .*/package.name = dkwinboss/' buildozer.spec
-          # লাইব্রেরি এবং লাইসেন্স সেটিংস
-          sed -i 's/^requirements = .*/requirements = python3,kivy==2.2.1,kivymd==1.1.1,numpy,opencv-python,pytesseract,sqlite3/' buildozer.spec
-          sed -i 's/^#android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
-          # লাইসেন্স ফোর্স একসেপ্ট করে বিল্ড শুরু
-          mkdir -p ~/.android && touch ~/.android/repositories.cfg
-          yes | buildozer android debug
+          export PATH=$PATH:$HOME/.local/bin
+          [ -f buildozer.spec ] || buildozer init
+          
+          # সেটিংস আপডেট
+          sed -i 's/^title = .*/title = Dkwin OpenCV/' buildozer.spec
+          sed -i 's/^package.name = .*/package.name = dkwinopencv/' buildozer.spec
+          
+          # প্রধান পরিবর্তন এখানে (opencv রেসিপি ব্যবহার)
+          sed -i 's/^requirements = .*/requirements = python3,kivy==2.2.1,kivymd==1.1.1,opencv,numpy/' buildozer.spec
+          
+          # ক্যামেরা পারমিশন যোগ করা
+          sed -i 's/^#android.permissions = .*/android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE/' buildozer.spec
+          
+          # লাইসেন্স একসেপ্ট
+          sed -i 's/^# android.accept_sdk_license = False/android.accept_sdk_license = True/' buildozer.spec
+          
+          # বিল্ড শুরু (OpenCV বিল্ড হতে অনেক সময় নেয়, ধৈর্য ধরুন)
+          buildozer -v android debug
+
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
-          name: Dkwin_Boss_APK
+          name: Dkwin_OpenCV_APK
           path: bin/*.apk
